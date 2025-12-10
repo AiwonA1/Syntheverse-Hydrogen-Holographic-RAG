@@ -112,11 +112,33 @@
             color: #555;
         }
 
-        .option-group input {
+        .option-group input,
+        .option-group select {
             padding: 8px 12px;
             border: 2px solid #e0e0e0;
             border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .option-group input {
             width: 80px;
+        }
+
+        .option-group select {
+            min-width: 200px;
+            cursor: pointer;
+        }
+
+        .option-group select:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+
+        .option-group select:disabled {
+            background: #f5f5f5;
+            color: #999;
+            cursor: not-allowed;
         }
 
         .results-section {
@@ -344,6 +366,16 @@
                 </div>
                 <div class="options">
                     <div class="option-group">
+                        <label>LLM Model:</label>
+                        <select id="llm-model" style="padding: 8px 12px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 14px; background: white; cursor: pointer;">
+                            <option value="local">Local Mode (No API)</option>
+                            <option value="openai" disabled>OpenAI GPT-4 (Coming Soon)</option>
+                            <option value="anthropic" disabled>Anthropic Claude (Coming Soon)</option>
+                            <option value="gemini" disabled>Google Gemini (Coming Soon)</option>
+                            <option value="local-llm" disabled>Local LLM (Coming Soon)</option>
+                        </select>
+                    </div>
+                    <div class="option-group">
                         <label>Top Results:</label>
                         <input type="number" id="top-k" value="5" min="1" max="20">
                     </div>
@@ -400,6 +432,7 @@
 
             const topK = parseInt(document.getElementById('top-k').value) || 5;
             const minScore = parseFloat(document.getElementById('min-score').value) || 0.0;
+            const llmModel = document.getElementById('llm-model').value || 'local';
 
             // Show loading, hide results and error
             document.getElementById('loading').style.display = 'block';
@@ -416,7 +449,8 @@
                     body: JSON.stringify({
                         query: query,
                         top_k: topK,
-                        min_score: minScore
+                        min_score: minScore,
+                        llm_model: llmModel
                     })
                 });
 
@@ -429,13 +463,17 @@
                 // Display answer with rich formatting
                 const answerBox = document.getElementById('answer-box');
                 const formattedAnswer = formatAnswer(data.answer);
+                const numSources = data.num_sources || (data.sources ? data.sources.length : 0);
+                const topResonance = data.sources && data.sources[0] ? (data.sources[0].score * 100).toFixed(1) + '%' : 'N/A';
+                
                 answerBox.innerHTML = `
                     <h3>✦ Syntheverse Whole Brain AI Response ◇</h3>
                     <div class="answer-text">${formattedAnswer}</div>
                     <div style="margin-top: 15px; color: #666; font-size: 0.9em; padding-top: 15px; border-top: 1px solid #e0e0e0;">
                         <strong>Processing:</strong> ${data.processing_time.toFixed(2)}s | 
-                        <strong>Sources:</strong> ${data.num_sources} | 
-                        <strong>Resonance:</strong> ${data.sources && data.sources[0] ? (data.sources[0].score * 100).toFixed(1) + '%' : 'N/A'}
+                        <strong>Sources:</strong> ${numSources} | 
+                        <strong>Top Resonance:</strong> ${topResonance} | 
+                        <strong>Mode:</strong> ${data.llm_mode || 'local'} ${data.llm_model === 'local' ? '(No API)' : ''}
                     </div>
                 `;
 
@@ -449,7 +487,7 @@
                                     <span class="source-title">${escapeHtml(source.pdf_filename)}</span>
                                     <span class="source-score">Resonance: ${(source.score * 100).toFixed(1)}% ${source.score > 0.8 ? '✦✦✦' : source.score > 0.6 ? '✦✦' : '✦'}</span>
                                 </div>
-                                <div class="source-text">${formatAnswer(escapeHtml(source.text))}</div>
+                                <div class="source-text">${formatSourceText(source.text)}</div>
                             </div>
                         `).join('');
                 } else {
@@ -473,10 +511,17 @@
         }
 
         function formatAnswer(text) {
-            // First escape HTML to prevent XSS
-            text = escapeHtml(text);
+            // Clean up excessive whitespace and normalize text
+            text = text.replace(/\s+/g, ' '); // Replace multiple spaces with single space
+            text = text.replace(/\n\s*\n\s*\n+/g, '\n\n'); // Replace multiple newlines with double
+            text = text.trim();
             
-            // Format tags with colors (must be done after escaping)
+            // Decode HTML entities
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = text;
+            text = textarea.value;
+            
+            // Format tags with colors (before escaping)
             text = text.replace(/\[Data\]/g, '<span class="tag-data">[Data]</span>');
             text = text.replace(/\[Symbolic\]/g, '<span class="tag-symbolic">[Symbolic]</span>');
             text = text.replace(/\[Hybrid\]/g, '<span class="tag-hybrid">[Hybrid]</span>');
@@ -495,16 +540,44 @@
             text = text.replace(/◎/g, '<span class="resonance-indicator">◎</span>');
             
             // Format source references
-            text = text.replace(/Source \d+:/g, '<strong style="color: #667eea;">$&</strong>');
+            text = text.replace(/Source \d+:/g, '<strong style="color: #667eea; display: block; margin-top: 15px; margin-bottom: 5px;">$&</strong>');
             
-            // Format commands (bullet points)
-            text = text.replace(/(• [^\n<]+)/g, '<div style="margin-left: 20px; margin-top: 8px; padding: 8px; background: #f8f9fa; border-left: 3px solid #667eea; color: #555;">$1</div>');
+            // Format commands (bullet points) - improved regex
+            text = text.replace(/(• [^\n•]+)/g, '<div style="margin-left: 20px; margin-top: 8px; padding: 8px; background: #f8f9fa; border-left: 3px solid #667eea; color: #555; border-radius: 4px;">$1</div>');
             
             // Format strong emphasis
             text = text.replace(/\*\*([^*]+)\*\*/g, '<strong style="color: #667eea;">$1</strong>');
             
-            // Preserve line breaks
+            // Format sections with better spacing
+            text = text.replace(/(\[Data\] Sources:)/g, '<div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #e0e0e0;"><strong style="color: #667eea;">$1</strong></div>');
+            
+            // Preserve intentional line breaks but clean up excessive ones
+            text = text.replace(/\n{3,}/g, '\n\n'); // Max 2 consecutive newlines
             text = text.replace(/\n/g, '<br>');
+            
+            return text;
+        }
+
+        function formatSourceText(text) {
+            // Clean up source text - remove excessive whitespace
+            text = text.replace(/\s+/g, ' ');
+            text = text.trim();
+            
+            // Truncate very long sources for better display
+            if (text.length > 500) {
+                text = text.substring(0, 500) + '...';
+            }
+            
+            // Decode HTML entities
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = text;
+            text = textarea.value;
+            
+            // Format tags in source text
+            text = text.replace(/\[Data\]/g, '<span class="tag-data">[Data]</span>');
+            text = text.replace(/\[Symbolic\]/g, '<span class="tag-symbolic">[Symbolic]</span>');
+            text = text.replace(/\[Hybrid\]/g, '<span class="tag-hybrid">[Hybrid]</span>');
+            text = text.replace(/\[Speculative\]/g, '<span class="tag-speculative">[Speculative]</span>');
             
             return text;
         }

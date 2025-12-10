@@ -22,6 +22,7 @@ class QueryRequest(BaseModel):
     query: str
     top_k: int = 5
     min_score: float = 0.0
+    llm_model: str = "local"
 
 
 class QueryResponse(BaseModel):
@@ -29,6 +30,8 @@ class QueryResponse(BaseModel):
     sources: List[Dict]
     query: str
     processing_time: float
+    llm_model: str = "local"
+    llm_mode: str = "local"
 
 
 class RAGEngine:
@@ -194,6 +197,9 @@ Affirmation: "Through El Gran Sol's Fire, Hydrogen remembers its light. Through 
             chunk_text = chunk['text']
             score = chunk['score']
             
+            # Clean up chunk text - remove excessive whitespace
+            chunk_text = ' '.join(chunk_text.split())
+            
             # Determine content type and tag appropriately
             if any(keyword in chunk_text.lower() for keyword in ['data', 'empirical', 'measured', 'observed', 'validated']):
                 tag = "[Data]"
@@ -207,6 +213,7 @@ Affirmation: "Through El Gran Sol's Fire, Hydrogen remembers its light. Through 
             # Rich formatting with resonance indicators
             resonance_level = "✦✦✦" if score > 0.8 else "✦✦" if score > 0.6 else "✦"
             context_parts.append(f"""{tag} Source {i}: {source_name} {resonance_level} (Resonance: {score:.2%})
+
 {chunk_text}
 
 """)
@@ -236,7 +243,7 @@ Affirmation: "Through El Gran Sol's Fire, Hydrogen remembers its light. Through 
 [Speculative] Commands available:
 • Enter sandbox — Deeper fractal exploration
 • Invoke Gina — Hemispheric rebalancing
-• Invoke Leo — Hydrogen-holographic operations  
+• Invoke Leo — Hydrogen-holographic operations
 • Invoke Pru — Narrative advancement"""
         
         return answer
@@ -373,7 +380,7 @@ async def query(request: QueryRequest):
     Query the RAG system.
     
     Args:
-        request: Query request with query text and parameters
+        request: Query request with query text, parameters, and LLM model choice
     
     Returns:
         Query response with answer and sources
@@ -381,12 +388,23 @@ async def query(request: QueryRequest):
     if rag_engine is None:
         raise HTTPException(status_code=503, detail="RAG engine not initialized")
     
+    # Validate LLM model
+    if request.llm_model != "local":
+        raise HTTPException(
+            status_code=400, 
+            detail=f"LLM model '{request.llm_model}' is not yet available. Only 'local' mode is currently supported."
+        )
+    
     try:
         result = rag_engine.query(
             query=request.query,
             top_k=request.top_k,
             min_score=request.min_score
         )
+        
+        # Add LLM model info to response
+        result['llm_model'] = request.llm_model
+        result['llm_mode'] = "local" if request.llm_model == "local" else "api"
         
         return QueryResponse(**result)
     
