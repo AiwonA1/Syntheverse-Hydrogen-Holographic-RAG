@@ -112,14 +112,31 @@ python vectorize_parsed_chunks_simple.py \
 - ✅ Progress tracking for each PDF
 - ✅ Error handling continues on failures
 
-### Step 4: Query (Optional)
+### Step 4: Start RAG API (Recommended)
 
-After vectorization, you can use the RAG pipeline:
+Start the RAG API server with web UI:
 
 ```bash
-# Use the full LangChain RAG pipeline
-python langchain_rag_pipeline.py --query-only
+# Install API dependencies
+pip install -r requirements_api.txt
+
+# Start the API server
+python rag_api.py
 ```
+
+**Access:**
+- **Web UI**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
+- **API Endpoint**: http://localhost:8000/query
+
+**Features:**
+- ✅ REST API for programmatic access
+- ✅ Built-in web UI for interactive queries
+- ✅ No API calls required - uses local embeddings
+- ✅ Fast similarity search
+- ✅ CORS enabled for frontend integration
+
+See **API_README.md** for detailed API documentation.
 
 ## Complete Example
 
@@ -133,8 +150,13 @@ python parse_all_pdfs.py --pdf-dir ./pdfs
 # 3. Vectorize parsed chunks
 python vectorize_parsed_chunks_simple.py --parsed-dir ./parsed --output-dir ./vectorized
 
-# 4. (Optional) Query using RAG pipeline
-python langchain_rag_pipeline.py --query-only
+# 4. Start RAG API server
+python rag_api.py
+
+# Then access:
+# - Web UI: http://localhost:8000
+# - API: http://localhost:8000/query
+# - Docs: http://localhost:8000/docs
 ```
 
 ## Directory Structure
@@ -144,6 +166,10 @@ python langchain_rag_pipeline.py --query-only
 ├── scrape_pdfs.py                    # Zenodo PDF scraper
 ├── parse_all_pdfs.py                # PDF parser
 ├── vectorize_parsed_chunks_simple.py # Vectorization script (local embeddings)
+├── rag_api.py                        # RAG API server (FastAPI)
+├── start_rag_api.sh                  # API startup script
+├── static/                           # Web UI files
+│   └── index.html                   # RAG query interface
 ├── pdfs/                             # Downloaded PDF files
 ├── parsed/                           # Parsed PDF chunks (JSON files)
 ├── vectorized/                       # Vectorized embeddings
@@ -181,7 +207,15 @@ python langchain_rag_pipeline.py --query-only
 - ✅ Progress tracking and error handling
 - ✅ Supports multiple embedding models
 
-### RAG Pipeline
+### RAG API (`rag_api.py`)
+- ✅ REST API for programmatic access
+- ✅ Built-in web UI for interactive queries
+- ✅ Local embeddings - no API calls required
+- ✅ Fast cosine similarity search
+- ✅ CORS enabled for frontend integration
+- ✅ Auto-generated API documentation
+
+### RAG Pipeline (Alternative)
 - ✅ LangChain-based (industry standard)
 - ✅ ChromaDB vector store
 - ✅ Semantic search and retrieval
@@ -229,10 +263,12 @@ Key dependencies:
 1. **Scrape**: Download PDFs from Zenodo → `./pdfs/`
 2. **Parse**: Extract text chunks from PDFs → `./parsed/`
 3. **Vectorize**: Create embeddings from parsed chunks → `./vectorized/embeddings/`
-4. **Query**: Ask questions using the RAG system
+4. **API**: Start RAG API server → `http://localhost:8000`
+5. **Query**: Ask questions via web UI or API calls
 
 ## Additional Documentation
 
+- **API_README.md**: Complete RAG API documentation
 - **SCRAPER_README.md**: Detailed scraper documentation
 - **LANGCHAIN_README.md**: LangChain RAG pipeline documentation
 - **QUICK_START_LANGCHAIN.md**: Quick start guide for RAG
