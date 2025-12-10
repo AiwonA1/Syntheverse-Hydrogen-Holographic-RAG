@@ -22,11 +22,9 @@ ENV/
 *~
 
 # Data files (too large for git)
-# pdfs/  # Commented out to allow PDFs in repository
 data/pdfs/
 data/chroma_db/
 data/faiss_db/
-# *.pdf  # Commented out to allow PDFs in repository
 
 # Logs
 *.log
