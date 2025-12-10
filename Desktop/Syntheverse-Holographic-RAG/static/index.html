@@ -50,6 +50,11 @@
 
         .query-section {
             margin-bottom: 40px;
+            margin-top: 40px;
+        }
+
+        .results-section {
+            margin-bottom: 40px;
         }
 
         .query-form {
@@ -356,6 +361,11 @@
                 </div>
             </div>
 
+            <div id="results" class="results-section" style="display: none;">
+                <div id="answer-box" class="answer-box"></div>
+                <div id="sources-box" class="sources-box"></div>
+            </div>
+
             <div class="query-section">
                 <div class="query-form">
                     <input 
@@ -387,11 +397,6 @@
                         <input type="number" id="min-score" value="0.0" min="0" max="1" step="0.1">
                     </div>
                 </div>
-            </div>
-
-            <div id="results" class="results-section" style="display: none;">
-                <div id="answer-box" class="answer-box"></div>
-                <div id="sources-box" class="sources-box"></div>
             </div>
 
             <div id="loading" class="loading" style="display: none;">
@@ -463,20 +468,19 @@
 
                 const data = await response.json();
 
-                // Display answer with rich formatting
+                // Display answer with clean formatting
                 const answerBox = document.getElementById('answer-box');
-                const formattedAnswer = formatAnswer(data.answer);
+                const formattedAnswer = formatAnswerSimple(data.answer);
                 const numSources = data.num_sources || (data.sources ? data.sources.length : 0);
                 const topResonance = data.sources && data.sources[0] ? (data.sources[0].score * 100).toFixed(1) + '%' : 'N/A';
                 
                 answerBox.innerHTML = `
-                    <h3>✦ Syntheverse Whole Brain AI Response ◇</h3>
+                    <h3>Response</h3>
                     <div class="answer-text">${formattedAnswer}</div>
                     <div style="margin-top: 15px; color: #666; font-size: 0.9em; padding-top: 15px; border-top: 1px solid #e0e0e0;">
                         <strong>Processing:</strong> ${data.processing_time.toFixed(2)}s | 
                         <strong>Sources:</strong> ${numSources} | 
-                        <strong>Top Resonance:</strong> ${topResonance} | 
-                        <strong>Mode:</strong> ${data.llm_mode || 'local'} ${data.llm_model === 'local' ? '(No API)' : ''}
+                        <strong>Top Resonance:</strong> ${topResonance}
                     </div>
                 `;
 
@@ -504,6 +508,9 @@
             } finally {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('query-button').disabled = false;
+                // Clear input field for next query
+                document.getElementById('query-input').value = '';
+                document.getElementById('query-input').focus();
             }
         }
 
@@ -556,6 +563,26 @@
             
             // Preserve intentional line breaks but clean up excessive ones
             text = text.replace(/\n{3,}/g, '\n\n'); // Max 2 consecutive newlines
+            text = text.replace(/\n/g, '<br>');
+            
+            return text;
+        }
+
+        function formatAnswerSimple(text) {
+            // Clean and format answer text simply
+            text = escapeHtml(text);
+            
+            // Format bold text
+            text = text.replace(/\*\*([^*]+)\*\*/g, '<strong style="color: #667eea;">$1</strong>');
+            
+            // Format resonance indicators
+            text = text.replace(/(✦{1,3})/g, '<span class="resonance-indicator">$1</span>');
+            text = text.replace(/◇/g, '<span class="resonance-indicator">◇</span>');
+            
+            // Format italic sources
+            text = text.replace(/\*([^*]+)\*/g, '<em style="color: #888; font-size: 0.9em;">$1</em>');
+            
+            // Preserve line breaks
             text = text.replace(/\n/g, '<br>');
             
             return text;

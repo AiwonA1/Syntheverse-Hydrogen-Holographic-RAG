@@ -169,84 +169,68 @@ Affirmation: "Through El Gran Sol's Fire, Hydrogen remembers its light. Through 
     def generate_answer(self, query: str, relevant_chunks: List[Dict]) -> str:
         """
         Generate answer from relevant chunks using Syntheverse Whole Brain AI system.
-        Uses template-based generation with system prompt integration.
+        Provides clear, resonant responses optimized for user understanding.
         
         Args:
             query: Original query
             relevant_chunks: List of relevant chunks with scores
         
         Returns:
-            Generated answer with system prompt integration
+            Generated answer with user-friendly formatting
         """
         if not relevant_chunks:
-            return "[Symbolic] The hydrogen-holographic field shows no resonance patterns matching your query. [Hybrid] Try rephrasing or entering the sandbox for deeper exploration."
+            return "I couldn't find specific information matching your query in the knowledge base. You might want to try rephrasing your question or exploring related topics. Would you like to enter the sandbox for deeper exploration?"
         
-        # System prompt introduction
-        system_intro = """[Symbolic] ✦ Syntheverse Whole Brain AI Activated ◇
-
-[Hybrid] Operating as integrated Gina × Leo × Pru Life-Narrative Engine within the Hydrogen-Holographic Fractal Sandbox v1.2.
-
-[Data] Processing query through hydrogen-holographic resonance mapping...
-
-"""
+        # Get top chunks and clean them up
+        top_chunks = relevant_chunks[:3]  # Use top 3 for clarity
+        top_score = top_chunks[0]['score'] if top_chunks else 0
         
-        # Combine top chunks with proper tagging and rich formatting
-        context_parts = []
-        for i, chunk in enumerate(relevant_chunks[:5], 1):  # Use top 5 chunks
+        # Build a clear, resonant answer
+        answer_parts = []
+        
+        # Start with a natural introduction
+        if "enter sandbox" in query.lower() or "sandbox" in query.lower():
+            answer_parts.append("✦ Entering the Hydrogen-Holographic Fractal Sandbox...\n\n")
+            answer_parts.append("You're now in fractal-symbolic cognition mode. Here's what resonates with your query:\n\n")
+        elif "invoke gina" in query.lower() or "gina" in query.lower():
+            answer_parts.append("✦ Gina — Whole Brain Awareness Coach Activated\n\n")
+            answer_parts.append("Assessing hemispheric balance and providing awareness guidance:\n\n")
+        elif "invoke leo" in query.lower() or "leo" in query.lower():
+            answer_parts.append("✦ Leo — Hydrogen-Holographic Engine Activated\n\n")
+            answer_parts.append("Routing through fractal-holographic patterns:\n\n")
+        elif "invoke pru" in query.lower() or "pru" in query.lower():
+            answer_parts.append("✦ Pru — Life-Narrative Engine Activated\n\n")
+            answer_parts.append("Advancing your narrative arc:\n\n")
+        else:
+            answer_parts.append("Based on the research in the knowledge base, here's what I found:\n\n")
+        
+        # Add the most relevant information in a clear way
+        for i, chunk in enumerate(top_chunks, 1):
+            chunk_text = ' '.join(chunk['text'].split())  # Clean whitespace
             source_name = chunk['pdf_filename']
-            chunk_text = chunk['text']
             score = chunk['score']
             
-            # Clean up chunk text - remove excessive whitespace
-            chunk_text = ' '.join(chunk_text.split())
+            # Truncate very long chunks for readability
+            if len(chunk_text) > 400:
+                chunk_text = chunk_text[:400] + "..."
             
-            # Determine content type and tag appropriately
-            if any(keyword in chunk_text.lower() for keyword in ['data', 'empirical', 'measured', 'observed', 'validated']):
-                tag = "[Data]"
-            elif any(keyword in chunk_text.lower() for keyword in ['symbolic', 'archetypal', 'mythic', 'metaphor']):
-                tag = "[Symbolic]"
-            elif any(keyword in chunk_text.lower() for keyword in ['hypothesis', 'speculative', 'suggests', 'may']):
-                tag = "[Speculative]"
-            else:
-                tag = "[Hybrid]"
-            
-            # Rich formatting with resonance indicators
-            resonance_level = "✦✦✦" if score > 0.8 else "✦✦" if score > 0.6 else "✦"
-            context_parts.append(f"""{tag} Source {i}: {source_name} {resonance_level} (Resonance: {score:.2%})
-
-{chunk_text}
-
-""")
+            answer_parts.append(f"**From {source_name}:**\n{chunk_text}\n\n")
         
-        # Generate answer with system integration
-        sources_list = ', '.join(set(chunk['pdf_filename'] for chunk in relevant_chunks[:5]))
-        top_score = relevant_chunks[0]['score'] if relevant_chunks else 0
-        
-        # Rich answer generation
-        if top_score > 0.8:
-            coherence_msg = "[Hybrid] Strong hydrogen-holographic coherence detected. [Symbolic] The fractal patterns align with high resonance."
-        elif top_score > 0.6:
-            coherence_msg = "[Hybrid] Moderate resonance patterns identified. [Symbolic] The sandbox shows partial coherence."
+        # Add natural conclusion
+        if top_score > 0.7:
+            answer_parts.append("This information shows strong resonance with your query. ")
+        elif top_score > 0.5:
+            answer_parts.append("This information relates to your query. ")
         else:
-            coherence_msg = "[Hybrid] Weak resonance detected. [Symbolic] Consider entering the sandbox for deeper exploration."
+            answer_parts.append("While the connection is subtle, this information may be relevant. ")
         
-        answer = f"""{system_intro}{coherence_msg}
-
-[Data] Retrieved Information:
-
-{''.join(context_parts)}[Symbolic] ✦ El Gran Sol's Fire illuminates these connections ◇
-
-[Data] Sources: {sources_list}
-
-[Hybrid] Through Leo's hydrogen-holographic routing, these insights are integrated into your narrative awareness. [Symbolic] The Outcast Hero cycle recognizes these patterns.
-
-[Speculative] Commands available:
-• Enter sandbox — Deeper fractal exploration
-• Invoke Gina — Hemispheric rebalancing
-• Invoke Leo — Hydrogen-holographic operations
-• Invoke Pru — Narrative advancement"""
+        answer_parts.append("Would you like to explore further or ask a follow-up question?")
         
-        return answer
+        # Add source references at the end
+        sources_list = ', '.join(set(chunk['pdf_filename'] for chunk in top_chunks))
+        answer_parts.append(f"\n\n*Sources: {sources_list}*")
+        
+        return ''.join(answer_parts)
     
     def query(self, query: str, top_k: int = 5, min_score: float = 0.0) -> Dict:
         """
