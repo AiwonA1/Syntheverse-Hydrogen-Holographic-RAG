@@ -374,6 +374,46 @@ async def stats():
     }
 
 
+@app.get("/llm-models")
+async def get_llm_models():
+    """Get available LLM models."""
+    return {
+        "available_models": [
+            {
+                "id": "local",
+                "name": "Local Mode",
+                "description": "Template-based generation (no API calls, free)",
+                "available": True
+            },
+            {
+                "id": "openai",
+                "name": "OpenAI GPT-4",
+                "description": "Requires OpenAI API key",
+                "available": False
+            },
+            {
+                "id": "anthropic",
+                "name": "Anthropic Claude",
+                "description": "Requires Anthropic API key",
+                "available": False
+            },
+            {
+                "id": "gemini",
+                "name": "Google Gemini",
+                "description": "Requires Google API key",
+                "available": False
+            },
+            {
+                "id": "local-llm",
+                "name": "Local LLM",
+                "description": "Ollama, LlamaCpp, or similar (coming soon)",
+                "available": False
+            }
+        ],
+        "current_default": "local"
+    }
+
+
 @app.post("/query", response_model=QueryResponse)
 async def query(request: QueryRequest):
     """

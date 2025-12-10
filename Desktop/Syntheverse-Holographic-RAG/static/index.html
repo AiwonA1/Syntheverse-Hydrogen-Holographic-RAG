@@ -351,6 +351,9 @@
                     <strong>Pru</strong> — Life-Narrative Engine<br>
                     <span style="color: #888; font-size: 0.9em;">All responses are tagged: [Data] [Symbolic] [Hybrid] [Speculative]</span>
                 </div>
+                <div style="margin-top: 10px; padding: 10px; background: #e8f5e9; border-radius: 5px; font-size: 0.9em; color: #2e7d32;">
+                    <strong>Current Mode:</strong> Local Processing (No API calls required) — All processing uses local embeddings
+                </div>
             </div>
 
             <div class="query-section">
@@ -582,8 +585,33 @@
             return text;
         }
 
-        // Load stats on page load
+        // Load stats and LLM models on page load
         loadStats();
+        loadLLMModels();
+
+        async function loadLLMModels() {
+            try {
+                const response = await fetch(`${API_URL}/llm-models`);
+                const data = await response.json();
+                
+                // Update select with available models
+                const select = document.getElementById('llm-model');
+                select.innerHTML = '';
+                
+                data.available_models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = model.name + (model.available ? '' : ' (Coming Soon)');
+                    option.disabled = !model.available;
+                    if (model.id === data.current_default) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading LLM models:', error);
+            }
+        }
     </script>
 </body>
 </html>
