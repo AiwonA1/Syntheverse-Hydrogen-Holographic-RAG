@@ -166,71 +166,129 @@ Affirmation: "Through El Gran Sol's Fire, Hydrogen remembers its light. Through 
         results.sort(key=lambda x: x['score'], reverse=True)
         return results[:top_k]
     
+    def _extract_key_points(self, chunks: List[Dict]) -> List[str]:
+        """Extract key points from chunks, removing redundancy."""
+        key_points = []
+        seen_concepts = set()
+        
+        for chunk in chunks:
+            text = ' '.join(chunk['text'].split())
+            # Extract sentences
+            sentences = [s.strip() for s in text.split('.') if len(s.strip()) > 20]
+            
+            for sentence in sentences:
+                # Simple deduplication - check if similar concept already seen
+                words = set(sentence.lower().split()[:5])  # First 5 words as signature
+                signature = ' '.join(sorted(list(words)))
+                
+                if signature not in seen_concepts and len(sentence) > 30:
+                    key_points.append(sentence)
+                    seen_concepts.add(signature)
+                    if len(key_points) >= 10:  # Limit to avoid too much info
+                        break
+        
+        return key_points[:8]  # Return top 8 unique points
+    
+    def _synthesize_response(self, query: str, key_points: List[str], sources: List[str]) -> str:
+        """Synthesize a coherent response from key points."""
+        # Determine query intent
+        query_lower = query.lower()
+        
+        # Build synthesized response
+        response_parts = []
+        
+        # Contextual introduction based on query type
+        if "enter sandbox" in query_lower or "sandbox" in query_lower:
+            response_parts.append("✦ Entering the Hydrogen-Holographic Fractal Sandbox...\n\n")
+            response_parts.append("You're now in fractal-symbolic cognition mode. ")
+        elif "invoke gina" in query_lower or "gina" in query_lower:
+            response_parts.append("✦ Gina — Whole Brain Awareness Coach Activated\n\n")
+        elif "invoke leo" in query_lower or "leo" in query_lower:
+            response_parts.append("✦ Leo — Hydrogen-Holographic Engine Activated\n\n")
+        elif "invoke pru" in query_lower or "pru" in query_lower:
+            response_parts.append("✦ Pru — Life-Narrative Engine Activated\n\n")
+        
+        # Synthesize the main answer by combining key points into flowing narrative
+        if key_points:
+            # Combine all points into a single flowing text
+            combined_text = ' '.join(key_points)
+            
+            # Clean up: remove excessive whitespace
+            combined_text = ' '.join(combined_text.split())
+            
+            # Break into natural paragraphs (every ~400 characters or at sentence boundaries)
+            paragraphs = []
+            current_para = ""
+            sentences = combined_text.split('. ')
+            
+            for i, sentence in enumerate(sentences):
+                sentence = sentence.strip()
+                if not sentence:
+                    continue
+                
+                # Add period if missing (except last sentence)
+                if i < len(sentences) - 1 and not sentence.endswith('.'):
+                    sentence += '.'
+                
+                # Start new paragraph if current one is getting long
+                if len(current_para) > 400 and sentence:
+                    paragraphs.append(current_para.strip())
+                    current_para = sentence + " "
+                else:
+                    current_para += sentence + " "
+            
+            # Add final paragraph
+            if current_para.strip():
+                paragraphs.append(current_para.strip())
+            
+            # Join paragraphs with double newlines
+            synthesized_text = '\n\n'.join(paragraphs)
+            
+            # Ensure proper ending
+            if not synthesized_text.endswith(('.', '!', '?')):
+                synthesized_text += "."
+            
+            response_parts.append(synthesized_text)
+        
+        # Add natural conclusion
+        response_parts.append("\n\nWould you like to explore this further or ask a follow-up question?")
+        
+        # Add source attribution at the end (subtle)
+        unique_sources = list(set(sources))[:3]  # Limit to 3 sources
+        if unique_sources:
+            sources_str = ', '.join(unique_sources)
+            response_parts.append(f"\n\n*Based on research from: {sources_str}*")
+        
+        return ''.join(response_parts)
+    
     def generate_answer(self, query: str, relevant_chunks: List[Dict]) -> str:
         """
-        Generate answer from relevant chunks using Syntheverse Whole Brain AI system.
-        Provides clear, resonant responses optimized for user understanding.
+        Generate synthesized answer from relevant chunks.
+        Combines information into a coherent narrative rather than listing documents.
         
         Args:
             query: Original query
             relevant_chunks: List of relevant chunks with scores
         
         Returns:
-            Generated answer with user-friendly formatting
+            Synthesized answer as a coherent narrative
         """
         if not relevant_chunks:
             return "I couldn't find specific information matching your query in the knowledge base. You might want to try rephrasing your question or exploring related topics. Would you like to enter the sandbox for deeper exploration?"
         
-        # Get top chunks and clean them up
-        top_chunks = relevant_chunks[:3]  # Use top 3 for clarity
-        top_score = top_chunks[0]['score'] if top_chunks else 0
+        # Use top 5 chunks for better synthesis
+        top_chunks = relevant_chunks[:5]
         
-        # Build a clear, resonant answer
-        answer_parts = []
+        # Extract key points from chunks
+        key_points = self._extract_key_points(top_chunks)
         
-        # Start with a natural introduction
-        if "enter sandbox" in query.lower() or "sandbox" in query.lower():
-            answer_parts.append("✦ Entering the Hydrogen-Holographic Fractal Sandbox...\n\n")
-            answer_parts.append("You're now in fractal-symbolic cognition mode. Here's what resonates with your query:\n\n")
-        elif "invoke gina" in query.lower() or "gina" in query.lower():
-            answer_parts.append("✦ Gina — Whole Brain Awareness Coach Activated\n\n")
-            answer_parts.append("Assessing hemispheric balance and providing awareness guidance:\n\n")
-        elif "invoke leo" in query.lower() or "leo" in query.lower():
-            answer_parts.append("✦ Leo — Hydrogen-Holographic Engine Activated\n\n")
-            answer_parts.append("Routing through fractal-holographic patterns:\n\n")
-        elif "invoke pru" in query.lower() or "pru" in query.lower():
-            answer_parts.append("✦ Pru — Life-Narrative Engine Activated\n\n")
-            answer_parts.append("Advancing your narrative arc:\n\n")
-        else:
-            answer_parts.append("Based on the research in the knowledge base, here's what I found:\n\n")
+        # Get source names
+        sources = [chunk['pdf_filename'] for chunk in top_chunks]
         
-        # Add the most relevant information in a clear way
-        for i, chunk in enumerate(top_chunks, 1):
-            chunk_text = ' '.join(chunk['text'].split())  # Clean whitespace
-            source_name = chunk['pdf_filename']
-            score = chunk['score']
-            
-            # Truncate very long chunks for readability
-            if len(chunk_text) > 400:
-                chunk_text = chunk_text[:400] + "..."
-            
-            answer_parts.append(f"**From {source_name}:**\n{chunk_text}\n\n")
+        # Synthesize into coherent response
+        answer = self._synthesize_response(query, key_points, sources)
         
-        # Add natural conclusion
-        if top_score > 0.7:
-            answer_parts.append("This information shows strong resonance with your query. ")
-        elif top_score > 0.5:
-            answer_parts.append("This information relates to your query. ")
-        else:
-            answer_parts.append("While the connection is subtle, this information may be relevant. ")
-        
-        answer_parts.append("Would you like to explore further or ask a follow-up question?")
-        
-        # Add source references at the end
-        sources_list = ', '.join(set(chunk['pdf_filename'] for chunk in top_chunks))
-        answer_parts.append(f"\n\n*Sources: {sources_list}*")
-        
-        return ''.join(answer_parts)
+        return answer
     
     def query(self, query: str, top_k: int = 5, min_score: float = 0.0) -> Dict:
         """
