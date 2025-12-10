@@ -1,0 +1,8 @@
+{
+  "total_processed": 0,
+  "total_skipped": 118,
+  "total_chunks": 3007,
+  "embedding_model": "all-MiniLM-L6-v2",
+  "embedding_dim": 0,
+  "processing_stats": []
+}
