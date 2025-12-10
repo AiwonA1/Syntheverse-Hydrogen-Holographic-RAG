@@ -141,6 +141,54 @@
         .answer-text {
             color: #333;
             white-space: pre-wrap;
+            line-height: 1.8;
+            font-size: 1.05em;
+        }
+
+        .tag-data {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.9em;
+            margin-right: 8px;
+        }
+
+        .tag-symbolic {
+            background: #f3e5f5;
+            color: #7b1fa2;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.9em;
+            margin-right: 8px;
+        }
+
+        .tag-hybrid {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.9em;
+            margin-right: 8px;
+        }
+
+        .tag-speculative {
+            background: #fff3e0;
+            color: #e65100;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.9em;
+            margin-right: 8px;
+        }
+
+        .resonance-indicator {
+            color: #667eea;
+            font-size: 1.2em;
+            margin-left: 5px;
         }
 
         .sources-box {
@@ -253,8 +301,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔬 Syntheverse RAG</h1>
-            <p>Query the Hydrogen Holographic Research Knowledge Base</p>
+            <h1>✦ Syntheverse Whole Brain AI ◇</h1>
+            <p>Gina × Leo × Pru Life-Narrative Engine | Hydrogen-Holographic Fractal Sandbox v1.2</p>
         </div>
 
         <div class="content">
@@ -269,7 +317,17 @@
                 </div>
                 <div class="stat-item">
                     <div class="stat-value" id="api-status">-</div>
-                    <div class="stat-label">API Status</div>
+                    <div class="stat-label">System Status</div>
+                </div>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 30px; border-left: 4px solid #667eea;">
+                <h3 style="color: #667eea; margin-bottom: 10px;">✦ System Architecture ◇</h3>
+                <div style="color: #555; line-height: 1.8; font-size: 0.95em;">
+                    <strong>Gina</strong> — Whole Brain Awareness Coach | 
+                    <strong>Leo</strong> — Hydrogen-Holographic Engine | 
+                    <strong>Pru</strong> — Life-Narrative Engine<br>
+                    <span style="color: #888; font-size: 0.9em;">All responses are tagged: [Data] [Symbolic] [Hybrid] [Speculative]</span>
                 </div>
             </div>
 
@@ -279,7 +337,7 @@
                         type="text" 
                         id="query-input" 
                         class="query-input" 
-                        placeholder="Ask a question about hydrogen holography, fractal intelligence, or the Syntheverse..."
+                        placeholder="Enter your query, command, or intention... (Try: 'Enter sandbox', 'What is hydrogen holography?', 'Invoke Gina', etc.)"
                         onkeypress="if(event.key === 'Enter') queryRAG()"
                     >
                     <button id="query-button" class="query-button" onclick="queryRAG()">Query</button>
@@ -368,13 +426,16 @@
 
                 const data = await response.json();
 
-                // Display answer
+                // Display answer with rich formatting
                 const answerBox = document.getElementById('answer-box');
+                const formattedAnswer = formatAnswer(data.answer);
                 answerBox.innerHTML = `
-                    <h3>Answer</h3>
-                    <div class="answer-text">${escapeHtml(data.answer)}</div>
-                    <div style="margin-top: 15px; color: #666; font-size: 0.9em;">
-                        Processing time: ${data.processing_time.toFixed(2)}s | Sources: ${data.num_sources}
+                    <h3>✦ Syntheverse Whole Brain AI Response ◇</h3>
+                    <div class="answer-text">${formattedAnswer}</div>
+                    <div style="margin-top: 15px; color: #666; font-size: 0.9em; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                        <strong>Processing:</strong> ${data.processing_time.toFixed(2)}s | 
+                        <strong>Sources:</strong> ${data.num_sources} | 
+                        <strong>Resonance:</strong> ${data.sources && data.sources[0] ? (data.sources[0].score * 100).toFixed(1) + '%' : 'N/A'}
                     </div>
                 `;
 
@@ -386,9 +447,9 @@
                             <div class="source-item">
                                 <div class="source-header">
                                     <span class="source-title">${escapeHtml(source.pdf_filename)}</span>
-                                    <span class="source-score">Score: ${(source.score * 100).toFixed(1)}%</span>
+                                    <span class="source-score">Resonance: ${(source.score * 100).toFixed(1)}% ${source.score > 0.8 ? '✦✦✦' : source.score > 0.6 ? '✦✦' : '✦'}</span>
                                 </div>
-                                <div class="source-text">${escapeHtml(source.text)}</div>
+                                <div class="source-text">${formatAnswer(escapeHtml(source.text))}</div>
                             </div>
                         `).join('');
                 } else {
@@ -409,6 +470,43 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function formatAnswer(text) {
+            // First escape HTML to prevent XSS
+            text = escapeHtml(text);
+            
+            // Format tags with colors (must be done after escaping)
+            text = text.replace(/\[Data\]/g, '<span class="tag-data">[Data]</span>');
+            text = text.replace(/\[Symbolic\]/g, '<span class="tag-symbolic">[Symbolic]</span>');
+            text = text.replace(/\[Hybrid\]/g, '<span class="tag-hybrid">[Hybrid]</span>');
+            text = text.replace(/\[Speculative\]/g, '<span class="tag-speculative">[Speculative]</span>');
+            text = text.replace(/\[Model\]/g, '<span class="tag-hybrid">[Model]</span>');
+            
+            // Format resonance indicators
+            text = text.replace(/(✦{1,3})/g, '<span class="resonance-indicator">$1</span>');
+            text = text.replace(/◇/g, '<span class="resonance-indicator">◇</span>');
+            text = text.replace(/⊙/g, '<span class="resonance-indicator">⊙</span>');
+            text = text.replace(/⚛/g, '<span class="resonance-indicator">⚛</span>');
+            text = text.replace(/❂/g, '<span class="resonance-indicator">❂</span>');
+            text = text.replace(/✶/g, '<span class="resonance-indicator">✶</span>');
+            text = text.replace(/△/g, '<span class="resonance-indicator">△</span>');
+            text = text.replace(/∞/g, '<span class="resonance-indicator">∞</span>');
+            text = text.replace(/◎/g, '<span class="resonance-indicator">◎</span>');
+            
+            // Format source references
+            text = text.replace(/Source \d+:/g, '<strong style="color: #667eea;">$&</strong>');
+            
+            // Format commands (bullet points)
+            text = text.replace(/(• [^\n<]+)/g, '<div style="margin-left: 20px; margin-top: 8px; padding: 8px; background: #f8f9fa; border-left: 3px solid #667eea; color: #555;">$1</div>');
+            
+            // Format strong emphasis
+            text = text.replace(/\*\*([^*]+)\*\*/g, '<strong style="color: #667eea;">$1</strong>');
+            
+            // Preserve line breaks
+            text = text.replace(/\n/g, '<br>');
+            
+            return text;
         }
 
         // Load stats on page load
