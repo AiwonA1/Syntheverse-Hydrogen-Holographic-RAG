@@ -7,8 +7,10 @@ A comprehensive RAG (Retrieval-Augmented Generation) system for processing and q
 This system provides a complete pipeline for:
 1. **Scraping PDFs** from Zenodo repositories
 2. **Parsing PDFs** into searchable text chunks
-3. **Vectorizing** chunks for semantic search
-4. **Querying** the knowledge base using RAG
+3. **Vectorizing** chunks for semantic search using local embeddings
+4. **Querying** the knowledge base via REST API or web UI
+
+All processing uses **local embeddings** - no external API calls required!
 
 ## Quick Start Workflow
 
@@ -88,7 +90,6 @@ python vectorize_parsed_chunks_simple.py --parsed-dir ./parsed --output-dir ./ve
 - `--parsed-dir`: Directory containing parsed JSON files (default: `./parsed`)
 - `--output-dir`: Directory to save vectorized embeddings (default: `./vectorized`)
 - `--embedding-model`: HuggingFace embedding model (default: `all-MiniLM-L6-v2`)
-- `--batch-size`: Batch size for embedding generation (default: 100)
 
 **Example:**
 ```bash
@@ -96,8 +97,7 @@ python vectorize_parsed_chunks_simple.py --parsed-dir ./parsed --output-dir ./ve
 python vectorize_parsed_chunks_simple.py \
   --parsed-dir ./parsed \
   --output-dir ./vectorized \
-  --embedding-model all-MiniLM-L6-v2 \
-  --batch-size 100
+  --embedding-model all-MiniLM-L6-v2
 ```
 
 **Output:**
@@ -112,9 +112,9 @@ python vectorize_parsed_chunks_simple.py \
 - ✅ Progress tracking for each PDF
 - ✅ Error handling continues on failures
 
-### Step 4: Start RAG API (Recommended)
+### Step 4: Start RAG API Server
 
-Start the RAG API server with web UI:
+Start the RAG API server with built-in web UI:
 
 ```bash
 # Install API dependencies
@@ -122,19 +122,25 @@ pip install -r requirements_api.txt
 
 # Start the API server
 python rag_api.py
+
+# Or use the startup script
+./start_rag_api.sh
 ```
 
 **Access:**
 - **Web UI**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
 - **API Endpoint**: http://localhost:8000/query
+- **Health Check**: http://localhost:8000/health
 
 **Features:**
 - ✅ REST API for programmatic access
 - ✅ Built-in web UI for interactive queries
-- ✅ No API calls required - uses local embeddings
-- ✅ Fast similarity search
+- ✅ Synthesized responses (not just document lists)
+- ✅ Local embeddings - no API calls required
+- ✅ Fast cosine similarity search
 - ✅ CORS enabled for frontend integration
+- ✅ Auto-generated API documentation
 
 See **API_README.md** for detailed API documentation.
 
@@ -164,10 +170,12 @@ python rag_api.py
 ```
 .
 ├── scrape_pdfs.py                    # Zenodo PDF scraper
-├── parse_all_pdfs.py                # PDF parser
+├── parse_all_pdfs.py                 # PDF parser
+├── langchain_pdf_processor.py        # PDF processing helper (used by parser)
 ├── vectorize_parsed_chunks_simple.py # Vectorization script (local embeddings)
 ├── rag_api.py                        # RAG API server (FastAPI)
 ├── start_rag_api.sh                  # API startup script
+├── requirements_api.txt              # API dependencies
 ├── static/                           # Web UI files
 │   └── index.html                   # RAG query interface
 ├── pdfs/                             # Downloaded PDF files
@@ -176,10 +184,8 @@ python rag_api.py
 │   ├── embeddings/                   # Embedding JSON files (one per PDF)
 │   └── metadata/                     # Vectorization metadata
 ├── scrape_results.json              # Scrape metadata
-└── data/                            # Vector database and metadata (optional)
-    ├── chroma_db/                   # ChromaDB vector store
-    ├── parsed/                      # Alternative parsed location
-    └── metadata/                    # Additional metadata
+├── API_README.md                    # API documentation
+└── README.md                        # This file
 ```
 
 ## Features
@@ -193,7 +199,7 @@ python rag_api.py
 
 ### PDF Parser (`parse_all_pdfs.py`)
 - ✅ Processes all PDFs in a directory
-- ✅ Uses LangChain's robust PDF loaders
+- ✅ Uses LangChain's robust PDF loaders (via `langchain_pdf_processor.py`)
 - ✅ Intelligent text chunking with overlap
 - ✅ Skips already parsed files (no duplicates)
 - ✅ Progress tracking and error handling
@@ -210,35 +216,37 @@ python rag_api.py
 ### RAG API (`rag_api.py`)
 - ✅ REST API for programmatic access
 - ✅ Built-in web UI for interactive queries
+- ✅ Synthesized responses (coherent narratives, not document lists)
 - ✅ Local embeddings - no API calls required
 - ✅ Fast cosine similarity search
 - ✅ CORS enabled for frontend integration
 - ✅ Auto-generated API documentation
-
-### RAG Pipeline (Alternative)
-- ✅ LangChain-based (industry standard)
-- ✅ ChromaDB vector store
-- ✅ Semantic search and retrieval
-- ✅ Question-answering interface
+- ✅ System prompt integration for Syntheverse Whole Brain AI
 
 ## Requirements
 
-### For Scraping
+### Core Dependencies
+
 ```bash
+# For scraping
 pip install requests
+
+# For parsing and vectorization
+pip install langchain langchain-community pypdf sentence-transformers
+
+# For RAG API
+pip install -r requirements_api.txt
 ```
 
-### For Parsing and Vectorization
-```bash
-pip install -r requirements_langchain.txt
-```
-
-Key dependencies:
-- `langchain`
-- `langchain-community`
-- `pypdf`
-- `sentence-transformers` (for local embeddings)
-- `chromadb` (optional, for ChromaDB-based vectorization)
+**Key dependencies:**
+- `requests` - HTTP requests for scraping
+- `langchain` - PDF processing framework
+- `langchain-community` - Community integrations
+- `pypdf` - PDF parsing
+- `sentence-transformers` - Local embeddings
+- `fastapi` - API framework
+- `uvicorn` - ASGI server
+- `numpy` - Numerical operations
 
 ## Configuration
 
@@ -258,6 +266,12 @@ Key dependencies:
 - Output: JSON files with text chunks and embeddings
 - No API calls required (uses local HuggingFace models)
 
+### RAG API
+- Default port: 8000
+- Default LLM mode: `local` (template-based synthesis)
+- Embeddings: Loaded from `./vectorized/embeddings/`
+- UI: Served from `./static/index.html`
+
 ## Workflow Summary
 
 1. **Scrape**: Download PDFs from Zenodo → `./pdfs/`
@@ -266,12 +280,17 @@ Key dependencies:
 4. **API**: Start RAG API server → `http://localhost:8000`
 5. **Query**: Ask questions via web UI or API calls
 
-## Additional Documentation
+## API Endpoints
 
-- **API_README.md**: Complete RAG API documentation
-- **SCRAPER_README.md**: Detailed scraper documentation
-- **LANGCHAIN_README.md**: LangChain RAG pipeline documentation
-- **QUICK_START_LANGCHAIN.md**: Quick start guide for RAG
+- `GET /` - Web UI
+- `POST /query` - Query the RAG system
+- `GET /search?q=<query>` - Search endpoint
+- `GET /health` - Health check
+- `GET /stats` - System statistics
+- `GET /llm-models` - Available LLM models
+- `GET /docs` - API documentation (Swagger)
+
+See **API_README.md** for detailed API documentation.
 
 ## Notes
 
@@ -281,8 +300,8 @@ Key dependencies:
 - The parser and vectorizer automatically detect and skip already processed files
 - All tools include progress tracking and error handling
 - Vectorization uses local embeddings (no API costs, works offline)
+- RAG API synthesizes responses into coherent narratives (not just document lists)
 
 ## License
 
 See repository for license information.
-
