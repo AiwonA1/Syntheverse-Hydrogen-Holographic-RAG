@@ -76,15 +76,48 @@ python parse_all_pdfs.py \
 - ✅ Progress tracking for each PDF
 - ✅ Error handling continues on failures
 
-### Step 3: Vectorize and Query (Optional)
+### Step 3: Vectorize Parsed Chunks
 
-After parsing, you can vectorize the chunks and use the RAG pipeline:
+Vectorize all parsed chunks using local embeddings (no API calls required):
 
 ```bash
-# Vectorize parsed chunks
-python vectorize_parsed.py
+python vectorize_parsed_chunks_simple.py --parsed-dir ./parsed --output-dir ./vectorized
+```
 
-# Or use the full LangChain RAG pipeline
+**Options:**
+- `--parsed-dir`: Directory containing parsed JSON files (default: `./parsed`)
+- `--output-dir`: Directory to save vectorized embeddings (default: `./vectorized`)
+- `--embedding-model`: HuggingFace embedding model (default: `all-MiniLM-L6-v2`)
+- `--batch-size`: Batch size for embedding generation (default: 100)
+
+**Example:**
+```bash
+# Vectorize with custom settings
+python vectorize_parsed_chunks_simple.py \
+  --parsed-dir ./parsed \
+  --output-dir ./vectorized \
+  --embedding-model all-MiniLM-L6-v2 \
+  --batch-size 100
+```
+
+**Output:**
+- Vectorized embeddings saved to: `./vectorized/embeddings/` (one JSON file per PDF)
+- Metadata saved to: `./vectorized/metadata/vectorization_metadata.json`
+- Automatically skips already vectorized files (no duplicates)
+
+**Features:**
+- ✅ Uses local HuggingFace embeddings (no API calls, free!)
+- ✅ No ChromaDB/SQLite dependency - saves directly to JSON files
+- ✅ Skips already vectorized files (no duplicates)
+- ✅ Progress tracking for each PDF
+- ✅ Error handling continues on failures
+
+### Step 4: Query (Optional)
+
+After vectorization, you can use the RAG pipeline:
+
+```bash
+# Use the full LangChain RAG pipeline
 python langchain_rag_pipeline.py --query-only
 ```
 
@@ -97,7 +130,10 @@ python scrape_pdfs.py --urls https://zenodo.org/records/17244387
 # 2. Parse all PDFs into chunks
 python parse_all_pdfs.py --pdf-dir ./pdfs
 
-# 3. (Optional) Vectorize and query
+# 3. Vectorize parsed chunks
+python vectorize_parsed_chunks_simple.py --parsed-dir ./parsed --output-dir ./vectorized
+
+# 4. (Optional) Query using RAG pipeline
 python langchain_rag_pipeline.py --query-only
 ```
 
@@ -105,15 +141,19 @@ python langchain_rag_pipeline.py --query-only
 
 ```
 .
-├── scrape_pdfs.py          # Zenodo PDF scraper
-├── parse_all_pdfs.py      # PDF parser (scraper → parser workflow)
-├── pdfs/                   # Downloaded PDF files
-├── parsed/                 # Parsed PDF chunks (JSON files)
-├── scrape_results.json    # Scrape metadata
-└── data/                  # Vector database and metadata
-    ├── chroma_db/         # ChromaDB vector store
-    ├── parsed/            # Alternative parsed location
-    └── metadata/          # Additional metadata
+├── scrape_pdfs.py                    # Zenodo PDF scraper
+├── parse_all_pdfs.py                # PDF parser
+├── vectorize_parsed_chunks_simple.py # Vectorization script (local embeddings)
+├── pdfs/                             # Downloaded PDF files
+├── parsed/                           # Parsed PDF chunks (JSON files)
+├── vectorized/                       # Vectorized embeddings
+│   ├── embeddings/                   # Embedding JSON files (one per PDF)
+│   └── metadata/                     # Vectorization metadata
+├── scrape_results.json              # Scrape metadata
+└── data/                            # Vector database and metadata (optional)
+    ├── chroma_db/                   # ChromaDB vector store
+    ├── parsed/                      # Alternative parsed location
+    └── metadata/                    # Additional metadata
 ```
 
 ## Features
@@ -133,6 +173,14 @@ python langchain_rag_pipeline.py --query-only
 - ✅ Progress tracking and error handling
 - ✅ Saves chunks as JSON files
 
+### Vectorization (`vectorize_parsed_chunks_simple.py`)
+- ✅ Vectorizes parsed chunks using local embeddings
+- ✅ No API calls required (uses HuggingFace models)
+- ✅ Saves embeddings as JSON files (no ChromaDB dependency)
+- ✅ Skips already vectorized files (no duplicates)
+- ✅ Progress tracking and error handling
+- ✅ Supports multiple embedding models
+
 ### RAG Pipeline
 - ✅ LangChain-based (industry standard)
 - ✅ ChromaDB vector store
@@ -146,7 +194,7 @@ python langchain_rag_pipeline.py --query-only
 pip install requests
 ```
 
-### For Parsing
+### For Parsing and Vectorization
 ```bash
 pip install -r requirements_langchain.txt
 ```
@@ -155,7 +203,8 @@ Key dependencies:
 - `langchain`
 - `langchain-community`
 - `pypdf`
-- `chromadb`
+- `sentence-transformers` (for local embeddings)
+- `chromadb` (optional, for ChromaDB-based vectorization)
 
 ## Configuration
 
@@ -169,11 +218,17 @@ Key dependencies:
 - Default chunk overlap: 200 characters
 - Output: JSON files with text chunks and metadata
 
+### Vectorization
+- Default embedding model: `all-MiniLM-L6-v2` (384 dimensions)
+- Alternative models: `all-mpnet-base-v2` (768 dimensions, better quality)
+- Output: JSON files with text chunks and embeddings
+- No API calls required (uses local HuggingFace models)
+
 ## Workflow Summary
 
 1. **Scrape**: Download PDFs from Zenodo → `./pdfs/`
 2. **Parse**: Extract text chunks from PDFs → `./parsed/`
-3. **Vectorize**: Create embeddings and store in vector database
+3. **Vectorize**: Create embeddings from parsed chunks → `./vectorized/embeddings/`
 4. **Query**: Ask questions using the RAG system
 
 ## Additional Documentation
@@ -186,8 +241,10 @@ Key dependencies:
 
 - PDFs are saved with sanitized filenames
 - Parsed files are cached (JSON) to avoid re-parsing
-- The parser automatically detects and skips already processed PDFs
+- Vectorized embeddings are cached (JSON) to avoid re-vectorization
+- The parser and vectorizer automatically detect and skip already processed files
 - All tools include progress tracking and error handling
+- Vectorization uses local embeddings (no API costs, works offline)
 
 ## License
 
