@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.venv
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Data files (too large for git)
+pdfs/
+data/pdfs/
+data/chroma_db/
+data/faiss_db/
+*.pdf
+
+# Logs
+*.log
+scrape_log.txt
+
+# OS
+.DS_Store
+.Trash/
+Thumbs.db
+
+# Results
+scrape_results.json
+data/metadata/*.json
+
+# Test files (optional - uncomment if you don't want test files in git)
+# test_*.py
